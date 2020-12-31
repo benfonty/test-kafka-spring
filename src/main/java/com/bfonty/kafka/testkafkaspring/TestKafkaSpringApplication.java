@@ -1,5 +1,7 @@
 package com.bfonty.kafka.testkafkaspring;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.twitter.hbc.ClientBuilder;
 import com.twitter.hbc.core.Client;
 import com.twitter.hbc.core.Constants;
@@ -18,6 +20,8 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -30,6 +34,12 @@ public class TestKafkaSpringApplication implements ApplicationRunner {
 
 	@Autowired
 	private TwitterConfiguration twitterConfiguration;
+
+	@Autowired
+	private KafkaTemplate kafkaTemplate;
+
+	private ObjectMapper objectMapper = new ObjectMapper().configure(
+			DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
 	public static void main(String[] args) {
 		SpringApplication.run(TestKafkaSpringApplication.class, args);
@@ -46,7 +56,7 @@ public class TestKafkaSpringApplication implements ApplicationRunner {
 			log.atFine().log("shutting down client from twitter...");
 			client.stop();
 			log.atFine().log("closing producer...");
-			//producer.close();
+			kafkaTemplate.destroy();
 			log.atFine().log("done!");
 		}));
 
@@ -59,15 +69,16 @@ public class TestKafkaSpringApplication implements ApplicationRunner {
 				client.stop();
 			}
 			if (msg != null){
-				log.atFine().log(msg);
-				/*producer.send(new ProducerRecord<>("twitter_tweets", null, msg), new Callback() {
-					@Override
-					public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-						if (e != null) {
-							logger.error("Something bad happened", e);
+				Tweet tweet = objectMapper.readValue(msg, Tweet.class);
+				kafkaTemplate.send("tweets", tweet.getId(), tweet).addCallback(
+						(result) -> {
+							SendResult<Long, Tweet> r = (SendResult<Long, Tweet>) result;
+							log.atFine().log("successfully sent tweet id %d", r.getProducerRecord().key());
+						},
+						(exception) -> {
+							log.atSevere().withCause(exception).log("cannot send message");
 						}
-					}
-				});*/
+				);
 			}
 		}
 		log.atFine().log("End of application");
@@ -80,7 +91,7 @@ public class TestKafkaSpringApplication implements ApplicationRunner {
 		Hosts hosebirdHosts = new HttpHosts(Constants.STREAM_HOST);
 		StatusesFilterEndpoint hosebirdEndpoint = new StatusesFilterEndpoint();
 
-		hosebirdEndpoint.trackTerms(List.of("switch"));
+		hosebirdEndpoint.trackTerms(List.of("bitcoin", "usa", "politics", "sport", "soccer"));
 
 		// These secrets should be read from a config file
 		Authentication hosebirdAuth = new OAuth1(

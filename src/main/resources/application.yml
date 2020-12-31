@@ -8,3 +8,6 @@ twitter:
   secret: theSecret
   token: theToken
   tokenSecret: theTokenSecret
+
+kafka:
+  bootstrap: 127.0.0.1:9092

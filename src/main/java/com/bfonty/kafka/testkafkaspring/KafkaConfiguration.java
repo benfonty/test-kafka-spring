@@ -6,12 +6,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConfigurationProperties(prefix="twitter")
+@ConfigurationProperties(prefix="kafka")
 @Getter
 @Setter
-public class TwitterConfiguration {
-    private String key;
-    private String secret;
-    private String token;
-    private String tokenSecret;
+public class KafkaConfiguration {
+    private String bootstrap;
 }
