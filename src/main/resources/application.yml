@@ -1,0 +1,10 @@
+logging:
+  level:
+    ROOT: INFO
+    com.bfonty: DEBUG
+
+twitter:
+  key: theKey
+  secret: theSecret
+  token: theToken
+  tokenSecret: theTokenSecret
